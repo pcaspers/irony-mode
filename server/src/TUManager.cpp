@@ -12,7 +12,6 @@
 #include "TUManager.h"
 
 #include <iostream>
-#include <stdio.h>
 
 #define MAX_NUMBER_TRANSLATION_UNITS 10
 
