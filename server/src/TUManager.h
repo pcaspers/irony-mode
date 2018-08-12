@@ -96,8 +96,10 @@ private:
                            const std::vector<std::string> &flags);
 
 private:
-  typedef std::map<const std::string, CXTranslationUnit> TranslationUnitsMap;
+  typedef std::vector<std::pair<std::string, CXTranslationUnit>> TranslationUnitsMap;
   typedef std::map<const std::string, std::vector<std::string>> FilenameFlagsMap;
+
+  TranslationUnitsMap::iterator tuMapEntry(const std::string& filename);
 
 private:
   CXIndex index_;

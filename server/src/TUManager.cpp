@@ -12,6 +12,9 @@
 #include "TUManager.h"
 
 #include <iostream>
+#include <stdio.h>
+
+#define MAX_NUMBER_TRANSLATION_UNITS 10
 
 TUManager::TUManager()
   : index_(clang_createIndex(0, 0))
@@ -61,7 +64,15 @@ TUManager::~TUManager() {
 
 CXTranslationUnit &TUManager::tuRef(const std::string &filename,
                                     const std::vector<std::string> &flags) {
-  CXTranslationUnit &tu = translationUnits_[filename];
+  TranslationUnitsMap::iterator it = tuMapEntry(filename);
+  if(it == translationUnits_.end()) {
+    translationUnits_.push_back(std::make_pair(filename, nullptr));
+      if(translationUnits_.size() > MAX_NUMBER_TRANSLATION_UNITS) {
+        invalidateCachedTU(translationUnits_.front().first);
+      }
+    it = translationUnits_.end() - 1;
+  }
+  CXTranslationUnit& tu = it->second;
 
   // if the flags changed since the last time, invalidate the translation unit
   auto &flagsCache = flagsPerFileCache_[filename];
@@ -158,7 +169,7 @@ TUManager::getOrCreateTU(const std::string &filename,
 }
 
 void TUManager::invalidateCachedTU(const std::string &filename) {
-  TranslationUnitsMap::iterator it = translationUnits_.find(filename);
+  TranslationUnitsMap::iterator it = tuMapEntry(filename);
 
   if (it != translationUnits_.end()) {
     if (CXTranslationUnit &tu = it->second)
@@ -174,9 +185,18 @@ void TUManager::invalidateAllCachedTUs() {
   while (it != translationUnits_.end()) {
     if (CXTranslationUnit &tu = it->second) {
       clang_disposeTranslationUnit(tu);
-      translationUnits_.erase(it++); // post-increment keeps the iterator valid
+      it = translationUnits_.erase(it);
     } else {
       ++it;
     }
   }
 }
+
+TUManager::TranslationUnitsMap::iterator
+TUManager::tuMapEntry(const std::string &filename) {
+  return std::find_if(
+      translationUnits_.begin(), translationUnits_.end(),
+      [&filename](const std::pair<const std::string, CXTranslationUnit> &x) {
+        return x.first == filename;
+      });
+ }
